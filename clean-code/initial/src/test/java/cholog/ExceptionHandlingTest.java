@@ -48,8 +48,11 @@ public class ExceptionHandlingTest {
         @DisplayName("예외 처리를 하지 않으면 컴파일 에러가 발생한다")
         void 예외_처리를_하지_않으면_컴파일_에러가_발생한다() {
             // Note: 컴파일 타임 예외의 경우 처리하지 않으면 컴파일이 불가능하다.
-            // TODO: 아래 코드의 주석을 풀어 컴파일 에러를 확인해보세요.
-            // throw new CheckedException();
+//             throw new CheckedException();
+            /**
+             * 1. 메서드 레벨에서 throw한다.
+             * 2. try-catch문을 통해 예외를 직접 처리한다.
+             */
         }
 
         /**
@@ -85,6 +88,10 @@ public class ExceptionHandlingTest {
          * 런타임 예외는 RuntimeException 클래스를 상속받아서 만들 수 있습니다.
          */
         static final class UncheckedException extends RuntimeException {
+            /**
+             * 컴파일 에러(체크드 에러) : Exception을 상속받는다.
+             * 런타임 에러(언체크드 에러) : RuntimeException을 상속받는다.
+             */
         }
 
         /**
@@ -118,7 +125,7 @@ public class ExceptionHandlingTest {
         @DisplayName("throws 키워드로 예외 처리하지 않아도 컴파일 에러가 발생하지 않는다")
         void throws_키워드로_예외_처리하지_않아도_컴파일_에러가_발생하지_않는다()
                 throws UncheckedException { // Note: 런타임 예외의 경우 처리하지 않아도 컴파일이 가능하다.
-            throw new UncheckedException();
+            throw new UncheckedException(); // 컴파일하고 실행 시에 정상적으로 예외를 발생시킨다.
         }
     }
 
@@ -140,6 +147,9 @@ public class ExceptionHandlingTest {
             }
 
             try {
+                /**
+                 * 체크드 예외가 발생되는 곳이므로 try 블럭으로 감싸야 한다.
+                 */
                 int randomValue = new Random().nextBoolean() ? 1 : 2;
 
                 if (randomValue == 1) {
@@ -155,7 +165,7 @@ public class ExceptionHandlingTest {
         }
 
         /**
-         * catch 블록을 여러 개 사용할 때 주의할 점은 하위 클래스의 예외를 먼저 처리해야 합니다.
+         * catch 블록을 여러 개 사용할 때 주의할 점은 하위 클래스의 예외를 먼저 처리(catch 블록의 상단에 위치)해야 합니다.
          * 하위 클래스란 상속 관계에서 하위에 있는 클래스를 의미합니다.
          * 하위 클래스의 예외를 먼저 처리하지 않으면 상위 클래스의 예외를 처리할 수 없어 컴파일 에러가 발생합니다.
          */
@@ -175,14 +185,11 @@ public class ExceptionHandlingTest {
                 } else if (randomValue == 2) {
                     throw new ChildException();
                 }
+            } catch (final ChildException e) { // 자식 예외가 먼저 처리 되도록 상단에 있어야 한다.
+                System.out.println("자식 예외 클래스 처리 성공");
             } catch (final SuperException e) {
                 System.out.println("예외 처리 성공");
             }
-            /* TODO: 주석을 풀고 컴파일 에러를 해결해보세요.
-             catch (final ChildException e) { // Note: 하위 클래스의 예외를 먼저 처리하지 않으면 컴파일 에러가 발생한다.
-                System.out.println("예외 처리 성공");
-            }
-             */
         }
 
         /**
@@ -209,6 +216,10 @@ public class ExceptionHandlingTest {
                     throw new SecondException();
                 }
             } catch (final SuperException e) { // Note: catch 블록 내부에서 동일한 처리를 한다면 catch 블록을 하나로 합칠 수 있다.
+                /**
+                 * 두 예외 클래스에 대해 동일한 처리를 할 수 있도록
+                 * 공통되는 조상 예외 클래스로 처리하였다.
+                 */
                 System.out.println("예외 처리 성공");
             }
         }
@@ -241,6 +252,11 @@ public class ExceptionHandlingTest {
                     throw new SecondException();
                 }
             } catch (final FirstException | SecondException e) {
+                /**
+                 * 동일한 예외 처리를 한다는 것은
+                 * 예외가 발생했을 때 수행하는 로직(코드)이 같다는 뜻이다.
+                 * 이 경우, FirstException과 SecondException의 조상이 다르기 때문에 멀티블록을 사용하였다.
+                 */
                 System.out.println("예외 처리 성공");
             }
         }
@@ -267,16 +283,21 @@ public class ExceptionHandlingTest {
             @DisplayName("유저의 이름의 최대 길이가 5자로 제한되어 있을 때 예외 처리를 어떻게 하는 것이 좋을까?")
             void 유저의_이름의_최대_길이가_5자로_제한되어_있을_때_예외_처리를_어떻게_하는_것이_좋을까() {
                 record User(String name) {
-                    static User create(final String name) {
+                    static User create(final String name) throws Exception {
                         if (name.length() > 5) {
-                            // TODO: 어떻게 예외 처리를 하는 것이 좋을지 고민 후 코드로 작성해보세요.
-                            return null;
+                            throw new Exception("이름은 최대 5자 입니다."); // 체크 예외 발생
                         }
                         return new User(name);
                     }
                 }
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                assertAll(
+                        () -> assertThatCode(() -> User.create("12345"))
+                                .doesNotThrowAnyException(), //예외가 발생하지 않는 코드를 테스트할 때 사용
+                        () -> assertThatThrownBy(() -> User.create("123456"))
+                                .isInstanceOf(Exception.class)
+                                .hasMessage("이름은 최대 5자 입니다.") // 예외가 발생하는 코드를 테스트할 때 사용
+                );
             }
 
             /**
@@ -291,14 +312,21 @@ public class ExceptionHandlingTest {
                 record User(String name) {
                     static User create(final String name) throws Exception {
                         if (name.length() > 5) {
-                            // TODO: 예외 처리를 강제하지 않는 코드를 어떻게 작성할 수 있을까?
-                            throw new Exception("이름의 길이는 5자를 넘을 수 없습니다.");
+                            // TODO: 예외 처리를 강제하지 않는 코드를 어떻게 작성할 수 있을까? : 언체크 예외 사용하기
+                            throw new IllegalArgumentException("이름의 길이는 5자를 넘을 수 없습니다.");
                         }
                         return new User(name);
                     }
                 }
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                // 여러 예외를 확인할 때 사용 : assertAll()
+                assertAll(
+                        () -> assertThatCode(() -> User.create("12345"))
+                                .doesNotThrowAnyException(),
+                        () -> assertThatThrownBy(() -> User.create("123456"))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름의 길이는 5자를 넘을 수 없습니다.")
+                );
             }
 
             /**
@@ -328,6 +356,11 @@ public class ExceptionHandlingTest {
                                 .isInstanceOf(IllegalArgumentException.class)
                                 .hasMessage("이름의 길이는 5자를 넘을 수 없습니다.")
                 );
+
+                /**
+                 * assertThatCode : 예외가 발생되지 않는 케이스를 테스트하는 경우 사용
+                 * assertThatThrownBy : 예외가 발생하는 케이스를 테스트하는 경우 사용
+                 */
             }
 
             /**
@@ -337,7 +370,6 @@ public class ExceptionHandlingTest {
             @DisplayName("유저 생성 시 여러 예외 상황이 발생할 수 있을 때 어떻게 예외 처리를 하는 것이 좋을까?")
             void 유저_생성_시_여러_예외_상황이_발생할_수_있을_때_어떻게_예외_처리를_하는_것이_좋을까() {
                 record User(String name) {
-                    // TODO: 모든 케이스를 나눠서 예외 처리 하는 것이 좋을지 고민 후 리팩토링 해보세요.
                     static User create(final String name) {
                         if (name == null) {
                             throw new IllegalArgumentException("이름이 Null일 수 없습니다.");
@@ -355,7 +387,20 @@ public class ExceptionHandlingTest {
                     }
                 }
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                assertAll(
+                        () -> assertThatThrownBy(() -> User.create(null))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름이 Null일 수 없습니다."),
+                        () -> assertThatThrownBy(() -> User.create(""))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름이 빈 값 일 수 없습니다."),
+                        () -> assertThatThrownBy(() -> User.create("  "))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름에 공백만 존재할 수 없습니다."),
+                        () -> assertThatThrownBy(() -> User.create("123456"))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름의 길이는 5자를 넘을 수 없습니다.")
+                        );
             }
 
             /**
@@ -370,14 +415,28 @@ public class ExceptionHandlingTest {
                 record User(String name) {
                     static User create(final String name) {
                         // TODO: 예외 상황을 적절한 레벨로 추상화하여 예외 처리를 분리해보세요.
-                        if (name == null || name.isBlank() || name.length() > 5) {
-                            throw new IllegalArgumentException("유저 생성에 실패했습니다.");
+                        // 하나의 예외 메시지로 표현할 수 있는 케이스끼리 추상화한다.
+                        if (name == null) {
+                            throw new IllegalArgumentException("이름은 null일 수 없습니다.");
+                        }
+                        if (name.isBlank() || name.length() > 5) {
+                            throw new IllegalArgumentException("이름은 최소 1자, 최대 5자입니다.");
                         }
                         return new User(name);
                     }
                 }
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                assertAll(
+                        () -> assertThatThrownBy(() -> User.create(null))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름은 null일 수 없습니다."),
+                        () -> assertThatThrownBy(() -> User.create(" "))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름은 최소 1자, 최대 5자입니다."),
+                        () -> assertThatThrownBy(() -> User.create("123456"))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("이름은 최소 1자, 최대 5자입니다.")
+                );
             }
 
             /**
@@ -389,20 +448,41 @@ public class ExceptionHandlingTest {
             @Test
             @DisplayName("외부에서 쉽게 예외를 구분할 수 있도록 하는 방법은 없을까?")
             void 외부에서_쉽게_예외를_구분할_수_있도록_하는_방법은_없을까() {
+
                 record User(String name) {
                     // TODO: 외부에서 메시지가 아닌 다른 방법으로 구분할 수 있도록 리팩토링 해보세요.
+                    // 커스텀 예외 클래스 생성하기
+                    static class UserNameIncorrect extends IllegalArgumentException {
+                        public UserNameIncorrect(String s) {
+                            super(s);
+                        }
+                    }
+
+                    static class UserNameLengthNotInRange extends IllegalArgumentException {
+                        public UserNameLengthNotInRange(String s) {
+                            super(s);
+                        }
+                    }
+
                     static User create(final String name) {
                         if (name == null || name.isBlank()) {
-                            throw new IllegalArgumentException("유저 이름이 올바르지 않습니다.");
+                            throw new UserNameIncorrect("유저 이름이 올바르지 않습니다.");
                         }
                         if (name.length() > 5) {
-                            throw new IllegalArgumentException("유저 이름의 길이는 5자를 넘을 수 없습니다.");
+                            throw new UserNameLengthNotInRange("유저 이름의 길이는 5자를 넘을 수 없습니다.");
                         }
                         return new User(name);
                     }
                 }
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                assertAll(
+                        () -> assertThatThrownBy(() -> User.create(null))
+                                .isInstanceOf(User.UserNameIncorrect.class),
+                        () -> assertThatThrownBy(() -> User.create("   "))
+                                .isInstanceOf(User.UserNameIncorrect.class),
+                        () -> assertThatThrownBy(() -> User.create("123456"))
+                                .isInstanceOf(User.UserNameLengthNotInRange.class)
+                );
             }
 
             /**
@@ -450,6 +530,15 @@ public class ExceptionHandlingTest {
                             .orElseThrow(() -> new IllegalArgumentException("해당 아이템이 존재하지 않습니다."));
                 }
             }
+
+            /**
+             *
+             *
+             *
+             * -------------------- 학습 시작 --------------------------
+             *
+             *
+             */
 
             /**
              * 해당 자판기가 가진 엔진은 오래된 엔진으로 아이템을 뽑을 때 가끔 실패할 수 있습니다.
