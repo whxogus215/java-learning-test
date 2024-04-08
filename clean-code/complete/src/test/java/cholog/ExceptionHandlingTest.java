@@ -665,6 +665,7 @@ public class ExceptionHandlingTest {
                             final var item = vendingMachine.selectItemByName(name);
                             soldItems.add(item);
                         } catch (final IllegalStateException e) {
+                            // 메시지로 표현
                             throw new IllegalStateException("자판기 회사에 문의하세요.", e);
                         }
                     }

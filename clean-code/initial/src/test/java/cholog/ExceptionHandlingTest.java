@@ -532,18 +532,10 @@ public class ExceptionHandlingTest {
             }
 
             /**
-             *
-             *
-             *
-             * -------------------- 학습 시작 --------------------------
-             *
-             *
-             */
-
-            /**
              * 해당 자판기가 가진 엔진은 오래된 엔진으로 아이템을 뽑을 때 가끔 실패할 수 있습니다.
              * 사용자는 내부에서 어떻게 동작하는지는 주 관심사가 아닙니다.
              * 내부 동작 상관 없이 의도된 아이템을 뽑도록 어떻게 예외 처리를 하는 것이 좋을까?
+             * -> 테스트 관점이 아닌 이 코드를 사용하는 사람이 예외로 인한 이슈를 겪지 않도록 리팩토링할 방법에 대해 고민
              */
             @Test
             @DisplayName("내부 동작 상관 없이 의도된 아이템을 뽑도록 어떻게 예외 처리를 하는 것이 좋을까?")
@@ -563,13 +555,33 @@ public class ExceptionHandlingTest {
                     @Override
                     Item selectItemByName(final String name) {
                         // TODO: 내부 동작 상관 없이 의도된 아이템을 뽑도록 어떻게 예외 처리를 하는 것이 좋을까?
-                        return super.selectItemByName(name);
+                        // 예외 발생(뽑기 실패) 시 메서드 다시 호출
+                        try {
+                            return super.selectItemByName(name);
+                        } catch (IllegalStateException e) {
+                            return selectItemByName(name);
+                        }
                     }
                 }
 
                 final var vendingMachine = new CustomVendingMachine();
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                assertAll(
+                        /**
+                         * assertThatThrownBy가 아닌 assertThatCode를 사용
+                         * -> CustomVendingMachine의 메서드는 예외가 발생하지 않기 때문
+                         * -> 예외가 발생하지 않는 코드를 테스트하는 것이므로 assertThatCode를 사용
+                         */
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("콜라")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("사이다")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("환타")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("펩시")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("마운틴듀")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("스프라이트")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("게토레이")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("파워에이드")).doesNotThrowAnyException(),
+                        () -> assertThatCode(() -> vendingMachine.selectItemByName("밀키스")).doesNotThrowAnyException()
+                );
             }
 
             /**
@@ -577,6 +589,8 @@ public class ExceptionHandlingTest {
              * 복구는 예외가 발생한 문제를 정상 상태로 돌려놓는 것을 의미하며, 호출하는 쪽에서는 복구 작업이 일어났는지 알 수 없습니다.
              * 즉, 복구는 외부에 문제가 발생했는지 여부를 알 필요가 없고 내부적으로 문제를 해결하는 경우 사용합니다.
              * 내부 문제가 있다면 외부에서 처리하도록 하는 방법은 없을까?
+             * -> 여기서 외부는 문제가 발생하는 코드를 사용하는 쪽을 말하는 듯
+             * -> 아래 예제코드에서는 CustomVendingMachine의 selectItemByName 메서드를 사용하는 쪽이 외부라고 할 수 있다.
              */
             @Test
             @DisplayName("내부 문제가 있다면 외부에서 처리하도록 하는 방법은 없을까?")
@@ -590,6 +604,10 @@ public class ExceptionHandlingTest {
 
                 final class CustomVendingMachine extends BrokenVendingMachine {
                     // TODO: 내부 문제가 있다면 외부에서 처리하도록 하는 방법은 없을까?
+
+                    /**
+                     * 코드를 사용하는 CustomVendingMachine을 외부라고 간주
+                     */
                     @Override
                     Item selectItemByName(final String name) {
                         try {
@@ -603,7 +621,26 @@ public class ExceptionHandlingTest {
 
                 final var vendingMachine = new CustomVendingMachine();
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                assertAll(
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("콜라"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("사이다"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("환타"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("펩시"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("마운틴듀"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("스프라이트"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("게토레이"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("파워에이드"))
+                            .isInstanceOf(IllegalArgumentException.class),
+                    () -> assertThatThrownBy(() -> vendingMachine.selectItemByName("밀키스"))
+                            .isInstanceOf(IllegalArgumentException.class)
+                );
             }
 
             /**
@@ -626,6 +663,10 @@ public class ExceptionHandlingTest {
                 final class CustomVendingMachine extends BrokenVendingMachine {
                     @Override
                     Item selectItemByName(final String name) throws IllegalArgumentException {
+                        /**
+                         * super.selectItemByName()이 언체크 예외를 발생하기 때문에 꼭 처리하지 않아도 된다.
+                         * 하지만 메서드 단위에서 throws를 함으로써 외부로 예외처리를 미루는(회피) 방법을 사용했다.
+                         */
                         return super.selectItemByName(name);
                     }
                 }
@@ -695,14 +736,23 @@ public class ExceptionHandlingTest {
 
                     // TODO: 의도된 회피인지 확인할 수 있도록 의도를 나타내는 방법은 없을까?
                     void orderFromVendingMachine(final String name) {
-                        final var item = vendingMachine.selectItemByName(name);
-                        soldItems.add(item);
+                        try {
+                            final var item = vendingMachine.selectItemByName(name);
+                            soldItems.add(item);
+                        } catch (IllegalArgumentException e) {
+
+                        }
                     }
                 }
 
                 final var store = new Store();
 
-                // TODO: 의도에 맞게 동작하는지 JUnit, AssertJ를 사용하여 확인해보세요.
+                store.orderFromVendingMachine("콜라");
+                assertThat(store.soldItems).isEmpty();
+                assertThatThrownBy(() -> store.orderFromVendingMachine("사이다"))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessage("아이템을 뽑는 데 실패했습니다.");
+
             }
 
             /**
@@ -729,6 +779,8 @@ public class ExceptionHandlingTest {
                             final var item = vendingMachine.selectItemByName(name);
                             soldItems.add(item);
                         } catch (final IllegalStateException e) {
+                            // 내부에서 발생한 예외를 잡아서 새로운 메시지를 담아 의도를 드러낸다.
+                            // 예외의 원인이 상위 예외 인스턴스인 e이기 때문에 새로운 메시지와 함께 같이 전달한다.
                             throw new IllegalStateException("자판기 회사에 문의하세요.", e);
                         }
                     }
