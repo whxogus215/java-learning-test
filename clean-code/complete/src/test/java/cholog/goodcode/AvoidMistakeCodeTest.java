@@ -476,6 +476,8 @@ public class AvoidMistakeCodeTest {
      * 불변 컬렉션을 사용하여 객체의 상태를 변경할 수 있는 위험을 방지하는 방법입니다.
      * 응답하는 컬렉션을 불변 컬렉션으로 만들어 객체의 상태를 변경할 수 있는 위험을 방지할 수 있습니다.
      * 입력을 받는 컬렉션을 불변 컬렉션을 만드는 것은 그대로 외부에서 조작할 수 있는 위험이 존재합니다.
+     * -> 불변 컬렉션으로 만들 경우, 외부에서 주입한 컬렉션과 내부의 컬렉션 주소가 서로 연결되기 때문
+     * -> 따라서 외부 컬렉션을 바탕으로 내부에서 컬렉션을 복사할 때는 방어적 복사(컬렉션 간 주소 공유 X)를 사용한다.
      * 따라서 입력받는 컬렉션은 방어적 복사로, 응답하는 컬렉션은 불변 컬렉션으로 만드는 것이 좋습니다.
      */
     @Test
@@ -525,6 +527,10 @@ public class AvoidMistakeCodeTest {
             private final List<Car> participants;
 
             RacingGame(final List<Car> participants) {
+                /**
+                 * 방어적 복사 사용 : 입력받은 컬렉션(participants)와 내부 컬렉션(this.participants)은
+                 * 방어적 복사로 인해, 서로 주소 공유 X -> participants를 변경하더라도 this.participants는 변경 X
+                 */
                 this.participants = new ArrayList<>(participants);
             }
 
@@ -542,11 +548,12 @@ public class AvoidMistakeCodeTest {
             private List<Car> matchCarsByPosition(final Position position) {
                 return participants.stream()
                         .filter(car -> car.matchPosition(position))
-                        .toList();
+                        .toList(); // UnmodifiableList 반환
             }
 
             List<Car> getParticipants() {
-                return unmodifiableList(participants);
+                return unmodifiableList(participants); // 외부에 반환하는 컬렉션은 읽기 전용인 불변 컬렉션으로 반환
+                // 단, this.participants가 변경되면(내부 변경), 반환된 불변 컬렉션도 변하긴 함 (immutable이 아니기 때문)
             }
         }
 
@@ -564,6 +571,7 @@ public class AvoidMistakeCodeTest {
 
         // Note: 불변 컬렉션을 사용하여 객체의 상태를 변경할 수 있는 위험을 방지할 수 있다.
         assertThatThrownBy(() -> {
+            // getParticipants()가 읽기 전용 컬렉션을 추가하기 때문에 외부에서 해당 컬렉션을 조작 X
             racingGame.getParticipants().add(new Car("솔라", new Position(3)));
         }).isInstanceOf(UnsupportedOperationException.class);
     }
